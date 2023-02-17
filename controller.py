@@ -1,6 +1,7 @@
 from machine import UART
 from bluetooth import bluetooth
 from oscilloscope import oscilloscope
+from function_generator import function_generator
 import struct
 import json
 
@@ -36,14 +37,11 @@ class controller:
         self.oscilloscope = oscilloscope(
             buffer_handler=self.buffer_handler_json)
 
+        self.generator = function_generator()
+
     def loop(self):
         while True:
             self.message_handler(self.bt.read_message())
-
-            if not self.bt.is_connected:
-                continue
-
-            self.oscilloscope.read_to_buffer()
 
     def get_settings(self):
         return json.dumps(self.settings)
@@ -54,9 +52,6 @@ class controller:
             if key in data:
                 self.settings[key] = data[key]
         print(f"NEW SETTINGS: {self.settings}")
-
-    def buffer_handler_json(self, buffer):
-        self.bt.write(json.dumps(buffer))
 
     def bytes_to_string(self, message: bytes | bytearray) -> str:
         return message.decode("utf-8")
@@ -74,3 +69,15 @@ class controller:
             self.bt.write(self.get_settings())
         elif message.startswith("SET+SETTINGS"):
             self.set_settings(message[8:])
+        elif message == "CAPTURE":
+            adc_buff = self.oscilloscope.capture()
+            self.bt.write(json.dumps(adc_buff))
+        elif message == "GEN START":
+            self.generator.start()
+            self.bt.write(self.generator.running)
+        elif message == "GEN STOP":
+            self.generator.stop()
+            self.bt.write(self.generator.running)
+        elif message.startswith("GEN SET_WAVE"):
+            self.generator.set_wave(message[13:])
+            self.bt.write(self.generator.wave.toJSON())
