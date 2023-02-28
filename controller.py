@@ -121,5 +121,7 @@ class controller:
         else:
             return False
 
-        self.generator.start()
+        if message != "GEN START" and message != "GEN STOP":
+            self.generator.start()
+
         return True
