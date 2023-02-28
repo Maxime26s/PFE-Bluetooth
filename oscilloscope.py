@@ -4,10 +4,8 @@ import lib.rp_devices as devs
 
 
 class oscilloscope:
-    def __init__(self, buffer_size=256, buffer_handler: function = None) -> None:
-        self.buffer = []
-        self.buffer_size = buffer_size
-        self.buffer_handler = buffer_handler
+    def __init__(self, settings: dict) -> None:
+        self.settings = settings
         self.setup()
 
     def setup(self):

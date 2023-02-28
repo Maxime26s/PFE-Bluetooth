@@ -151,46 +151,50 @@ ibuf = 0
 
 
 class wave:
-    def __init__(self, amplitude, offset, freq, func, pars):
+    def __init__(self, amplitude, offset, frequency, func, pars):
         self.amplitude = amplitude
         self.offset = offset
-        self.freq = freq
+        self.frequency = frequency
         self.func = func
         self.pars = pars
         self.phase = 0.0
         self.replicate = 1
 
-    def toJSON(self):
-        return json.dumps(self, default=lambda o: o.__dict__,
-                          sort_keys=True, indent=4)
-
 
 class function_generator:
-    def __init__(self) -> None:
-        self.wave = None
-        self.set_wave("SINE")
+    def __init__(self, settings: dict) -> None:
+        self.settings = settings
         self.running = False
+        self.wave = None
+
+        self.set_wave("NONE")
 
     def start(self):
-        setupwave(wavbuf[ibuf], self.wave.freq, self.wave)
         self.running = True
+        setupwave(wavbuf[ibuf], self.wave.frequency, self.wave)
 
     def stop(self):
-        mem32[CH2_AL1_CTRL] = 0
-        mem32[CH3_AL1_CTRL] = 0
-        self.running = False
+        self.set_wave("NONE")
 
     def set_wave(self, type):
         if type == "SINE":
-            self.wave = wave(0.5, 0.5, 2000, sine, [])
+            self.wave = wave(0.5, 0.5, 20000, sine, [0.0, 0.0, 0.0])
         elif type == "SQUARE":
-            self.wave = wave(0.5, 0.0, 2000, pulse, [0.0, 0.5, 0.0])
+            self.wave = wave(1.0, 0.0, 5000, pulse, [0.0, 0.5, 0.0])
         elif type == "TRIANGLE":
-            self.wave = wave(0.5, 0.0, 2000, pulse, [0.5, 0.0, 0.5])
+            self.wave = wave(1.0, 0.0, 10000, pulse, [0.5, 0.0, 0.5])
         elif type == "SAW":
-            self.wave = wave(0.5, 0.0, 2000, pulse, [1.0, 0.0, 0.0])
+            self.wave = wave(1.0, 0.0, 15000, pulse, [1.0, 0.0, 0.0])
+        elif type == "NONE":
+            self.wave = wave(0.0, 0.5, 5000, pulse, [0.0, 0.0, 0.0])
         else:
             return
 
         if self.running:
             self.start()
+
+    def set_wave_func(self, func_name):
+        if func_name == "SINE":
+            self.wave.func = sine
+        elif func_name == "PULSE":
+            self.wave.func = pulse
