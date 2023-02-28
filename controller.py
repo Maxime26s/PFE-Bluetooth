@@ -121,4 +121,5 @@ class controller:
         else:
             return False
 
+        self.generator.start()
         return True

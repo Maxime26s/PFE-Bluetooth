@@ -164,13 +164,11 @@ class wave:
 class function_generator:
     def __init__(self, settings: dict) -> None:
         self.settings = settings
-        self.running = False
         self.wave = None
 
         self.set_wave("NONE")
 
     def start(self):
-        self.running = True
         setupwave(wavbuf[ibuf], self.wave.frequency, self.wave)
 
     def stop(self):
@@ -190,8 +188,7 @@ class function_generator:
         else:
             return
 
-        if self.running:
-            self.start()
+        self.start()
 
     def set_wave_func(self, func_name):
         if func_name == "SINE":
