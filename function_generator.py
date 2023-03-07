@@ -176,19 +176,21 @@ class function_generator:
 
     def set_wave(self, type):
         if type == "SINE":
-            self.wave = wave(0.5, 0.5, 20000, sine, [0.0, 0.0, 0.0])
+            self.wave.func = sine
+            self.wave.pars = []
         elif type == "SQUARE":
-            self.wave = wave(1.0, 0.0, 5000, pulse, [0.0, 0.5, 0.0])
+            self.wave.func = pulse
+            self.wave.pars = [0.0,0.5,0.0] 
         elif type == "TRIANGLE":
-            self.wave = wave(1.0, 0.0, 10000, pulse, [0.5, 0.0, 0.5])
+            self.wave.func = pulse
+            self.wave.pars = [0.5,0.0,0.5]
         elif type == "SAW":
-            self.wave = wave(1.0, 0.0, 15000, pulse, [1.0, 0.0, 0.0])
+            self.wave.func = pulse
+            self.wave.pars = [1.0,0.0,0.0]
         elif type == "NONE":
-            self.wave = wave(0.0, 0.5, 5000, pulse, [0.0, 0.0, 0.0])
+            self.wave = wave(0.0, 0.1, 1, pulse, [0.0, 0.0, 0.0])
         else:
             return
-
-        self.start()
 
     def set_wave_func(self, func_name):
         if func_name == "SINE":

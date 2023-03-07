@@ -11,7 +11,6 @@ class bluetooth:
         self.poll.register(uart, select.POLLIN)
         self.timeout = timeout
         self.is_connected = False
-
         self.setup()
 
     def has_unread_data(self) -> bool:
@@ -49,7 +48,7 @@ class bluetooth:
         return self.send_at("NAME?")
 
     def set_name(self, name: str) -> bytearray:
-        return self.send_at(f"NAME{name}")
+        return self.send_at(f"NAME{name[:12]}")
 
     def disconnect(self) -> bytearray:
         return self.send_at()
@@ -62,6 +61,9 @@ class bluetooth:
             return self.send_at("NOTI1")
         else:
             return self.send_at("NOTI0")
+        
+    def set_baud(self, rate: int) -> bytearray:
+        return self.send_at(f"BAUD{rate}")
 
     def start_at(self) -> bytearray:
         response = self.disconnect()
@@ -76,11 +78,11 @@ class bluetooth:
 
     def setup(self) -> None:
         self.start_at()
-
+        self.set_baud(4)
         self.set_notification(True)
 
         if "PICO" not in self.get_name():
-            self.set_name("PICO-Unnamed")
+            self.set_name("PICO-Test")
 
         self.stop_at()
 
