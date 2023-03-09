@@ -4,7 +4,6 @@ from rp2 import PIO, StateMachine, asm_pio
 from array import array
 from math import pi, sin, floor
 from uctypes import addressof
-import json
 
 fclock = 125000000  # clock frequency of the pico
 
@@ -184,14 +183,33 @@ class function_generator:
         elif type == "SAW":
             self.wave = wave(1.0, 0.0, 15000, pulse, [1.0, 0.0, 0.0])
         elif type == "NONE":
-            self.wave = wave(0.0, 0.5, 5000, pulse, [0.0, 0.0, 0.0])
+            self.wave = wave(0.0, 0.1, 1, pulse, [0.0, 0.0, 0.0])
         else:
             return
 
-        self.start()
+    def set_wave_type(self, type):
+        if type == "SINE":
+            self.wave.func = sine
+            self.wave.pars = [0.0, 0.0, 0.0]
+        elif type == "SQUARE":
+            self.wave.func = pulse
+            self.wave.pars = [0.0, 0.5, 0.0]
+        elif type == "TRIANGLE":
+            self.wave.func = pulse
+            self.wave.pars = [0.5, 0.0, 0.5]
+        elif type == "SAW":
+            self.wave.func = pulse
+            self.wave.pars = [1.0, 0.0, 0.0]
+        elif type == "NONE":
+            self.wave.func = pulse
+            self.wave.pars = [0.0, 0.0, 0.0]
+        else:
+            return
 
     def set_wave_func(self, func_name):
         if func_name == "SINE":
             self.wave.func = sine
         elif func_name == "PULSE":
             self.wave.func = pulse
+        else:
+            return
