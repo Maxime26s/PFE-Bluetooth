@@ -1,4 +1,4 @@
-from machine import UART
+from machine import UART, Pin
 import select
 
 
@@ -100,3 +100,11 @@ class bluetooth:
         if not self.at_mode and self.uart.any():
             return self.read()
         return bytes()
+    
+if __name__ == "__main__":
+    uart = UART(0, 115200)
+    uart.init(0, 115200, rx=Pin(17), tx=Pin(16))
+    bt = bluetooth(uart)
+    bt.start_at()
+    bt.set_baud(0)
+    bt.stop_at()
