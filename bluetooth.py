@@ -99,4 +99,4 @@ class bluetooth:
     def try_read(self) -> bytes:
         if not self.at_mode and self.uart.any():
             return self.read()
-        return bytearray()
+        return bytes()

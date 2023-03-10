@@ -108,7 +108,7 @@ class controller:
             return
 
     def message_handler_oscilloscope(self, message: str) -> bool:
-        message = message.capitalize()
+        message = message.upper()
 
         if message == "OSC CAPTURE":
             adc_buff = self.oscilloscope.capture()
@@ -125,7 +125,7 @@ class controller:
         return True
 
     def message_handler_generator(self, message: str) -> bool:
-        message = message.capitalize()
+        message = message.upper()
 
         try:
             if message == "GEN START":
