@@ -109,6 +109,12 @@ class controller:
         if self.message_handler_generator(message):
             return
 
+    def message_handler_source(self, message: str) -> bool:
+        message = message.upper()
+    
+        if message.startswith("SRC SET_VOLTAGE"):
+            self.source.set_voltage(message[16:])
+        
     def message_handler_oscilloscope(self, message: str) -> bool:
         message = message.upper()
 
@@ -117,6 +123,8 @@ class controller:
             self.bt.try_write(json.dumps(adc_buff))
         elif message.startswith("OSC SET_CHAN_2"):
             self.oscilloscope.set_channel_2(message[15:])
+        elif message.startswith("OSC SET_RATE_AUTO"): # Valeur en microsecondes (us) (base de temps)
+            self.oscilloscope.set_sample_rate_auto(message[18:])
         elif message.startswith("OSC SET_RATE"):
             self.oscilloscope.set_sample_rate(message[13:])
         elif message.startswith("OSC SET_NUM_SAMPLE"):

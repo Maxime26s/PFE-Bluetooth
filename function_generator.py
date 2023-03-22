@@ -6,6 +6,9 @@ from math import pi, sin, floor
 from uctypes import addressof
 
 fclock = 125000000  # clock frequency of the pico
+nbit_dac = 12
+sampword=2
+maxnword=2048
 
 DMA_BASE = 0x50000000
 CH2_READ_ADDR = DMA_BASE+0x080
@@ -26,10 +29,10 @@ PIO0_SM0_CLKDIV = PIO0_BASE+0xc8
 # state machine that just pushes bytes to the pins
 
 
-@asm_pio(out_init=(PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH),
-         out_shiftdir=PIO.SHIFT_RIGHT, autopull=True, pull_thresh=32)
+@asm_pio(out_init=(PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH, PIO.OUT_HIGH),
+         out_shiftdir=PIO.SHIFT_RIGHT, autopull=True, pull_thresh=24)
 def stream():
-    out(pins, 8)
+    out(pins, 12)
 
 
 sm = StateMachine(0, stream, freq=125000000, out_base=Pin(0))
@@ -80,30 +83,41 @@ def startDMA(ar, nword):
     CTRL3 = (IRQ_QUIET << 21) | (TREQ_SEL << 15) | (CHAIN_TO << 11) | (RING_SEL << 10) | (RING_SIZE << 9) | (
         INCR_WRITE << 5) | (INCR_READ << 4) | (DATA_SIZE << 2) | (HIGH_PRIORITY << 1) | (EN << 0)
     mem32[CH3_CTRL_TRIG] = CTRL3
+    print("ok")
 
 
 def setupwave(buf, f, w):
     # required clock division for maximum buffer size
-    div = fclock/(f*maxnsamp)
-    if div < 1.0:  # can't speed up clock, duplicate wave instead
-        dup = int(1.0/div)
-        nsamp = int((maxnsamp*div*dup+0.5)/4)*4  # force multiple of 4
-        clkdiv = 1
+    div = fclock/(f*maxnword*sampword)
+    if div < 2.0:  # can't speed up clock, duplicate wave instead
+        dup = int(2.0/div)
+        nword = int((maxnword*div*dup/2.0+0.5))
+        clkdiv = 2.0
     else:  # stick with integer clock division only
-        clkdiv = int(div)+1
-        nsamp = int((maxnsamp*div/clkdiv+0.5)/4)*4  # force multiple of 4
+        clkdiv = int(div)+2.0
+        nword = int(maxnword*div/clkdiv+0.5)
         dup = 1
+    nsamp=nword*sampword
 
     # fill the buffer
-    for isamp in range(nsamp):
-        buf[isamp] = max(0, min(255, int(256*eval(w, dup*(isamp+0.5)/nsamp))))
+    for iword in range(nword):
+        word=0
+        for i in range(sampword):
+            isamp=iword*sampword+i
+            val=max(0,min((1<<12)-1,int((1<<12)*(0.5+0.5*eval(w,dup*(isamp+0.5)/nsamp)))))
+            word=word+(val<<(i*(nbit_dac)))
+        buf[iword*4+0]=(word&(255<< 0))>> 0
+        buf[iword*4+1]=(word&(255<< 8))>> 8
+        buf[iword*4+2]=(word&(255<<16))>>16
+        buf[iword*4+3]=(word&(255<<24))>>24
     # set the clock divider
-    clkdiv_int = min(clkdiv, 65535)
+    print(clkdiv)
+    clkdiv_int = min(int(clkdiv), 65535)
     clkdiv_frac = 0  # fractional clock division results in jitter
     mem32[PIO0_SM0_CLKDIV] = (clkdiv_int << 16) | (clkdiv_frac << 8)
 
     # start DMA
-    startDMA(buf, int(nsamp/4))
+    startDMA(buf, nword)
 
 # evaluate the content of a wave
 
@@ -144,8 +158,8 @@ def pulse(x, pars):  # risetime,uptime,falltime
 # large buffers give better results but are slower to fill
 maxnsamp = 4096  # must be a multiple of 4. miximum size is 65536
 wavbuf = {}
-wavbuf[0] = bytearray(maxnsamp)
-wavbuf[1] = bytearray(maxnsamp)
+wavbuf[0] = bytearray(maxnword*4)
+wavbuf[1] = bytearray(maxnword*4)
 ibuf = 0
 
 
@@ -157,7 +171,7 @@ class wave:
         self.func = func
         self.pars = pars
         self.phase = 0.0
-        self.replicate = 1
+        self.replicate = 1.0
 
 
 class function_generator:
@@ -165,7 +179,8 @@ class function_generator:
         self.settings = settings
         self.wave = None
 
-        self.set_wave("NONE")
+        self.set_wave("SQUARE")
+        self.start()
 
     def start(self):
         setupwave(wavbuf[ibuf], self.wave.frequency, self.wave)
@@ -175,13 +190,13 @@ class function_generator:
 
     def set_wave(self, type):
         if type == "SINE":
-            self.wave = wave(0.5, 0.5, 20000, sine, [0.0, 0.0, 0.0])
+            self.wave = wave(0.05, 0.2, 20000, sine, [0.0, 0.0, 0.0]) #max amplitude de 0.3 ...
         elif type == "SQUARE":
-            self.wave = wave(1.0, 0.0, 5000, pulse, [0.0, 0.5, 0.0])
+            self.wave = wave(1.0, 0.0, 20000, pulse, [0.0, 0.5, 0.0])
         elif type == "TRIANGLE":
-            self.wave = wave(1.0, 0.0, 10000, pulse, [0.5, 0.0, 0.5])
+            self.wave = wave(1.0, -0.5, 20000, pulse, [0.5, 0.0, 0.5])
         elif type == "SAW":
-            self.wave = wave(1.0, 0.0, 15000, pulse, [1.0, 0.0, 0.0])
+            self.wave = wave(0.5, 0.0, 20000, pulse, [1.0, 0.0, 0.0])
         elif type == "NONE":
             self.wave = wave(0.0, 0.1, 1, pulse, [0.0, 0.0, 0.0])
         else:
