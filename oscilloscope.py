@@ -22,9 +22,11 @@ class oscilloscope:
 
     def set_sample_rate(self, sample_rate):
         devs.parameters["xrate"] = int(sample_rate)
+        
     def set_sample_rate_auto(self, val_us):
         devs.parameters["xrate"] = int((1000000*devs.parameters["nsamples"])//(int(val_us)*12)) # Facteur de 1 000 000 pour mettre les microsecondes en secondes
         print(devs.parameters["xrate"])
+        
     def set_number_of_sample(self, number_sample):
         devs.parameters["nsamples"] = int(number_sample)
     

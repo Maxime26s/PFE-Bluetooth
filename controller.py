@@ -29,7 +29,7 @@ class controller:
 
     def setup_bt(self, app_mode: bool):
         uart = UART(0, 9600)
-        uart.init(0, 9600, rx=Pin(17), tx=Pin(16))
+        uart.init(0, 9600, rx=Pin(13), tx=Pin(12))
         self.bt = bluetooth(uart, app_mode=app_mode)
         self.bt.start_at()
         self.bt.set_baud(4)
@@ -40,7 +40,7 @@ class controller:
         time.sleep_ms(750)
 
         uart = UART(0, 115200)
-        uart.init(0, 115200, rx=Pin(17), tx=Pin(16))
+        uart.init(0, 115200, rx=Pin(13), tx=Pin(12))
         self.bt = bluetooth(uart, app_mode=app_mode)
         self.bt.setup()
 
@@ -114,6 +114,10 @@ class controller:
     
         if message.startswith("SRC SET_VOLTAGE"):
             self.source.set_voltage(message[16:])
+        else:
+            return False
+        
+        return True
         
     def message_handler_oscilloscope(self, message: str) -> bool:
         message = message.upper()
