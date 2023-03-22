@@ -7,12 +7,13 @@ message_delimiter = "|"
 
 
 class bluetooth:
-    def __init__(self, uart: UART, timeout: int = 100) -> None:
+    def __init__(self, uart: UART, timeout: int = 100, app_mode: bool = False) -> None:
         self.uart = uart
         self.at_mode = False
         self.poll = select.poll()
         self.poll.register(uart, select.POLLIN)
         self.timeout = timeout
+        self.app_mode = app_mode
         self.is_connected = False
 
     def has_unread_data(self) -> bool:
@@ -125,13 +126,19 @@ class bluetooth:
 
         self.stop_at()
 
-    def try_read(self, app_mode: bool) -> bytes:
+    def try_read(self) -> bytes:
         if not self.at_mode and self.uart.any():
-            if app_mode:
+            if self.app_mode:
                 return self.read_app()
             else:
                 return self.read()
         return bytes()
+
+    def try_write(self, message: str):
+        if self.app_mode:
+            self.write_long(message)
+        else:
+            self.write(message)
 
 
 if __name__ == "__main__":

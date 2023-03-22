@@ -11,7 +11,7 @@ class controller:
     def __init__(self, app_mode: bool = False) -> None:
         self.app_mode = app_mode
 
-        self.setup_bt()
+        self.setup_bt(app_mode)
 
         settings_oscilloscope = dict()
         settings_oscilloscope["enabled"] = False
@@ -27,10 +27,10 @@ class controller:
         settings_generator["enabled"] = False
         self.generator = function_generator(settings_generator)
 
-    def setup_bt(self):
+    def setup_bt(self, app_mode: bool):
         uart = UART(0, 9600)
         uart.init(0, 9600, rx=Pin(17), tx=Pin(16))
-        self.bt = bluetooth(uart)
+        self.bt = bluetooth(uart, app_mode=app_mode)
         self.bt.start_at()
         self.bt.set_baud(4)
         self.bt.stop_at()
@@ -41,12 +41,12 @@ class controller:
 
         uart = UART(0, 115200)
         uart.init(0, 115200, rx=Pin(17), tx=Pin(16))
-        self.bt = bluetooth(uart)
+        self.bt = bluetooth(uart, app_mode=app_mode)
         self.bt.setup()
 
     def loop(self):
         while True:
-            self.message_handler(self.bt.try_read(self.app_mode))
+            self.message_handler(self.bt.try_read())
 
     def get_settings(self):
         settings = dict()
@@ -95,9 +95,9 @@ class controller:
 
         # CUSTOM COMMANDS
         elif message.startswith("ECHO"):
-            self.bt.write_long(message[5:])
+            self.bt.try_write(message[5:])
         elif message == "GET SETTINGS":
-            self.bt.write_long(self.get_settings())
+            self.bt.try_write(self.get_settings())
         elif message.startswith("SET SETTINGS"):
             self.set_settings(message[13:])
 
@@ -114,7 +114,7 @@ class controller:
 
         if message == "OSC CAPTURE":
             adc_buff = self.oscilloscope.capture()
-            self.bt.write_long(json.dumps(adc_buff))
+            self.bt.try_write(json.dumps(adc_buff))
         elif message.startswith("OSC SET_CHAN_2"):
             self.oscilloscope.set_channel_2(message[15:])
         elif message.startswith("OSC SET_RATE"):
@@ -132,34 +132,34 @@ class controller:
         try:
             if message == "GEN START":
                 self.generator.start()
-                self.bt.write_long(str(self.generator.running))
+                self.bt.try_write(str(self.generator.running))
             elif message == "GEN STOP":
                 self.generator.stop()
-                self.bt.write_long(str(self.generator.running))
+                self.bt.try_write(str(self.generator.running))
             elif message.startswith("GEN SET_WAVE"):
                 self.generator.set_wave(message[13:])
-                self.bt.write_long("Wave set")
+                self.bt.try_write("Wave set")
             elif message.startswith("GEN SET_AMP"):
                 self.generator.wave.amplitude = float(message[12:])
-                self.bt.write_long("Wave amplitude set")
+                self.bt.try_write("Wave amplitude set")
             elif message.startswith("GEN SET_FREQ"):
                 self.generator.wave.frequency = float(message[13:])
-                self.bt.write_long("Wave frequency set")
+                self.bt.try_write("Wave frequency set")
             elif message.startswith("GEN SET_OFFSET"):
                 self.generator.wave.offset = float(message[15:])
-                self.bt.write_long("Wave offset set")
+                self.bt.try_write("Wave offset set")
             elif message.startswith("GEN SET_FUNC"):
                 self.generator.set_wave_func(message[13:])
-                self.bt.write_long("Wave func set")
+                self.bt.try_write("Wave func set")
             elif message.startswith("GEN SET_PARS_RISE"):
                 self.generator.wave.pars[0] = float(message[18:])
-                self.bt.write_long("Wave pars rise set")
+                self.bt.try_write("Wave pars rise set")
             elif message.startswith("GEN SET_PARS_HIGH"):
                 self.generator.wave.pars[1] = float(message[18:])
-                self.bt.write_long("Wave pars high set")
+                self.bt.try_write("Wave pars high set")
             elif message.startswith("GEN SET_PARS_FALL"):
                 self.generator.wave.pars[2] = float(message[18:])
-                self.bt.write_long("Wave pars fall set")
+                self.bt.try_write("Wave pars fall set")
             else:
                 return False
 
