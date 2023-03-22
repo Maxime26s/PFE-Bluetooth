@@ -1,3 +1,4 @@
+import gc
 import array
 from machine import Pin, mem32
 from rp2 import PIO, StateMachine, asm_pio
@@ -87,6 +88,7 @@ def startDMA(ar, nword):
 
 
 def setupwave(buf, f, w):
+    gc.collect()
     # required clock division for maximum buffer size
     div = fclock/(f*maxnword*sampword)
     if div < 2.0:  # can't speed up clock, duplicate wave instead
@@ -118,6 +120,7 @@ def setupwave(buf, f, w):
 
     # start DMA
     startDMA(buf, nword)
+    gc.collect()
 
 # evaluate the content of a wave
 
@@ -192,7 +195,7 @@ class function_generator:
         if type == "SINE":
             self.wave = wave(0.05, 0.2, 20000, sine, [0.0, 0.0, 0.0]) #max amplitude de 0.3 ...
         elif type == "SQUARE":
-            self.wave = wave(1.0, 0.0, 20000, pulse, [0.0, 0.5, 0.0])
+            self.wave = wave(0.5, 0.0, 1000, pulse, [0.0, 0.5, 0.0])
         elif type == "TRIANGLE":
             self.wave = wave(1.0, -0.5, 20000, pulse, [0.5, 0.0, 0.5])
         elif type == "SAW":
@@ -228,3 +231,29 @@ class function_generator:
             self.wave.func = pulse
         else:
             return
+        
+    def get_wave_func(self, func_name):
+        if func_name == "PULSE":
+            return pulse
+        else:
+            return sine
+        
+    def new_wave(self, message):
+        parts = message.split()
+        amp = float(parts[0])
+        freq = float(parts[1])
+        offset = float(parts[2])
+        func_type = parts[3]
+        func = self.get_wave_func(func_type)
+        rise = float(parts[4])
+        high = float(parts[5])
+        fall = float(parts[6])
+        
+        self.wave = wave(amp, offset, freq, func, [rise, high, fall])
+        print(amp, freq, offset, func_type, rise, high, fall)
+        
+if __name__ == "__main__":
+    wave = wave(0.5, 0.0, 0.5, pulse, [0.0, 0.5, 0.0])
+    print("Free memory before setupwave:", gc.mem_free())
+    setupwave(wavbuf[ibuf], wave.frequency, wave)
+    print("Free memory after setupwave:", gc.mem_free())

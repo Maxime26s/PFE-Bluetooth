@@ -5,7 +5,7 @@ from source import source
 from function_generator import function_generator
 import json
 import time
-
+import gc
 
 class controller:
     def __init__(self, app_mode: bool = False) -> None:
@@ -30,7 +30,8 @@ class controller:
     def setup_bt(self, app_mode: bool):
         uart = UART(0, 9600)
         uart.init(0, 9600, rx=Pin(13), tx=Pin(12))
-        self.bt = bluetooth(uart, app_mode=app_mode)
+        #uart.init(0, 9600, rx=Pin(17), tx=Pin(16))
+        self.bt = bluetooth(uart, timeout=500, app_mode=app_mode)
         self.bt.start_at()
         self.bt.set_baud(4)
         self.bt.stop_at()
@@ -41,12 +42,15 @@ class controller:
 
         uart = UART(0, 115200)
         uart.init(0, 115200, rx=Pin(13), tx=Pin(12))
-        self.bt = bluetooth(uart, app_mode=app_mode)
+        #uart.init(0, 115200, rx=Pin(17), tx=Pin(16))
+        self.bt = bluetooth(uart, timeout=500, app_mode=app_mode)
         self.bt.setup()
 
     def loop(self):
         while True:
             self.message_handler(self.bt.try_read())
+            print("Free memory:", gc.mem_free())
+            time.sleep(0.5)
 
     def get_settings(self):
         settings = dict()
@@ -144,10 +148,13 @@ class controller:
         try:
             if message == "GEN START":
                 self.generator.start()
-                self.bt.try_write(str(self.generator.running))
+                self.bt.try_write("true")
             elif message == "GEN STOP":
                 self.generator.stop()
-                self.bt.try_write(str(self.generator.running))
+                self.bt.try_write("stop")
+            elif message.startswith("GEN NEW_WAVE"):
+                self.generator.new_wave(message[13:])
+                self.bt.try_write("Wave created")
             elif message.startswith("GEN SET_WAVE"):
                 self.generator.set_wave(message[13:])
                 self.bt.try_write("Wave set")
@@ -178,7 +185,7 @@ class controller:
             if message != "GEN START":
                 self.generator.start()
 
-        except ValueError as e:
+        except Exception as e:
             print("value error", e)
 
         return True
