@@ -1,5 +1,9 @@
 from machine import UART, Pin
 import select
+import time
+
+max_chunk_size = 20
+message_delimiter = "|"
 
 
 class bluetooth:
@@ -14,11 +18,27 @@ class bluetooth:
     def has_unread_data(self) -> bool:
         return self.poll.poll(self.timeout) != []
 
+    def read_app(self) -> bytes:
+        received_message_buffer = bytearray()
+        while self.has_unread_data():
+            chunk = self.uart.read()
+            print(chunk)
+            if chunk.endswith(message_delimiter.encode()):
+                received_message_buffer.extend(
+                    chunk.rstrip(message_delimiter.encode()))
+                response = bytes(received_message_buffer)
+                received_message_buffer[:] = bytearray()
+                print(f"READ: {response}")
+                return response
+            else:
+                received_message_buffer.extend(chunk)
+        return bytes()
+
     def read(self) -> bytes:
         response = self.uart.read()
 
-        # while self.has_unread_data():
-        # response += self.uart.read()
+        while self.has_unread_data():
+            response += self.uart.read()
 
         print(f"READ: {response}")
         return response
@@ -35,6 +55,15 @@ class bluetooth:
     def write(self, message) -> None:
         self.uart.write(message)
         print(f"WRITE: {message}")
+
+    def write_long(self, message):
+        chunks = [message[i:i + max_chunk_size]
+                  for i in range(0, len(message), max_chunk_size)]
+        for index, chunk in enumerate(chunks):
+            chunk_with_delimiter = chunk + \
+                message_delimiter if index == len(chunks) - 1 else chunk
+            self.write(chunk_with_delimiter)
+            time.sleep_ms(50)
 
     def send_at(self, cmd: str = "") -> bytes:
         if cmd != "":
@@ -96,11 +125,15 @@ class bluetooth:
 
         self.stop_at()
 
-    def try_read(self) -> bytes:
+    def try_read(self, app_mode: bool) -> bytes:
         if not self.at_mode and self.uart.any():
-            return self.read()
+            if app_mode:
+                return self.read_app()
+            else:
+                return self.read()
         return bytes()
-    
+
+
 if __name__ == "__main__":
     uart = UART(0, 115200)
     uart.init(0, 115200, rx=Pin(17), tx=Pin(16))

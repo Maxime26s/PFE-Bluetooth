@@ -8,7 +8,9 @@ import time
 
 
 class controller:
-    def __init__(self) -> None:
+    def __init__(self, app_mode: bool = False) -> None:
+        self.app_mode = app_mode
+
         self.setup_bt()
 
         settings_oscilloscope = dict()
@@ -44,7 +46,7 @@ class controller:
 
     def loop(self):
         while True:
-            self.message_handler(self.bt.try_read())
+            self.message_handler(self.bt.try_read(self.app_mode))
 
     def get_settings(self):
         settings = dict()
@@ -93,9 +95,9 @@ class controller:
 
         # CUSTOM COMMANDS
         elif message.startswith("ECHO"):
-            self.bt.write(message[5:])
+            self.bt.write_long(message[5:])
         elif message == "GET SETTINGS":
-            self.bt.write(self.get_settings())
+            self.bt.write_long(self.get_settings())
         elif message.startswith("SET SETTINGS"):
             self.set_settings(message[13:])
 
@@ -112,7 +114,7 @@ class controller:
 
         if message == "OSC CAPTURE":
             adc_buff = self.oscilloscope.capture()
-            self.bt.write(json.dumps(adc_buff))
+            self.bt.write_long(json.dumps(adc_buff))
         elif message.startswith("OSC SET_CHAN_2"):
             self.oscilloscope.set_channel_2(message[15:])
         elif message.startswith("OSC SET_RATE"):
@@ -130,34 +132,34 @@ class controller:
         try:
             if message == "GEN START":
                 self.generator.start()
-                self.bt.write(str(self.generator.running))
+                self.bt.write_long(str(self.generator.running))
             elif message == "GEN STOP":
                 self.generator.stop()
-                self.bt.write(str(self.generator.running))
+                self.bt.write_long(str(self.generator.running))
             elif message.startswith("GEN SET_WAVE"):
                 self.generator.set_wave(message[13:])
-                self.bt.write("Wave set")
+                self.bt.write_long("Wave set")
             elif message.startswith("GEN SET_AMP"):
                 self.generator.wave.amplitude = float(message[12:])
-                self.bt.write("Wave amplitude set")
+                self.bt.write_long("Wave amplitude set")
             elif message.startswith("GEN SET_FREQ"):
                 self.generator.wave.frequency = float(message[13:])
-                self.bt.write("Wave frequency set")
+                self.bt.write_long("Wave frequency set")
             elif message.startswith("GEN SET_OFFSET"):
                 self.generator.wave.offset = float(message[15:])
-                self.bt.write("Wave offset set")
+                self.bt.write_long("Wave offset set")
             elif message.startswith("GEN SET_FUNC"):
                 self.generator.set_wave_func(message[13:])
-                self.bt.write("Wave func set")
+                self.bt.write_long("Wave func set")
             elif message.startswith("GEN SET_PARS_RISE"):
                 self.generator.wave.pars[0] = float(message[18:])
-                self.bt.write("Wave pars rise set")
+                self.bt.write_long("Wave pars rise set")
             elif message.startswith("GEN SET_PARS_HIGH"):
                 self.generator.wave.pars[1] = float(message[18:])
-                self.bt.write("Wave pars high set")
+                self.bt.write_long("Wave pars high set")
             elif message.startswith("GEN SET_PARS_FALL"):
                 self.generator.wave.pars[2] = float(message[18:])
-                self.bt.write("Wave pars fall set")
+                self.bt.write_long("Wave pars fall set")
             else:
                 return False
 
