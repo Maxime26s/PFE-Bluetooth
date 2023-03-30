@@ -7,6 +7,7 @@ import json
 import time
 import gc
 
+
 class controller:
     def __init__(self, app_mode: bool = False) -> None:
         self.app_mode = app_mode
@@ -30,7 +31,7 @@ class controller:
     def setup_bt(self, app_mode: bool):
         uart = UART(0, 9600)
         uart.init(0, 9600, rx=Pin(13), tx=Pin(12))
-        #uart.init(0, 9600, rx=Pin(17), tx=Pin(16))
+        # uart.init(0, 9600, rx=Pin(17), tx=Pin(16))
         self.bt = bluetooth(uart, timeout=500, app_mode=app_mode)
         self.bt.start_at()
         self.bt.set_baud(4)
@@ -42,7 +43,7 @@ class controller:
 
         uart = UART(0, 115200)
         uart.init(0, 115200, rx=Pin(13), tx=Pin(12))
-        #uart.init(0, 115200, rx=Pin(17), tx=Pin(16))
+        # uart.init(0, 115200, rx=Pin(17), tx=Pin(16))
         self.bt = bluetooth(uart, timeout=500, app_mode=app_mode)
         self.bt.setup()
 
@@ -115,23 +116,28 @@ class controller:
 
     def message_handler_source(self, message: str) -> bool:
         message = message.upper()
-    
+
         if message.startswith("SRC SET_VOLTAGE"):
             self.source.set_voltage(message[16:])
         else:
             return False
-        
+
         return True
-        
+
     def message_handler_oscilloscope(self, message: str) -> bool:
         message = message.upper()
 
         if message == "OSC CAPTURE":
             adc_buff = self.oscilloscope.capture()
             self.bt.try_write(json.dumps(adc_buff))
+        elif message.startswith("OSC CAPTURE"):
+            self.oscilloscope.set_sample_rate_auto(message[12:])
+            adc_buff = self.oscilloscope.capture()
+            self.bt.try_write(json.dumps(adc_buff))
         elif message.startswith("OSC SET_CHAN_2"):
             self.oscilloscope.set_channel_2(message[15:])
-        elif message.startswith("OSC SET_RATE_AUTO"): # Valeur en microsecondes (us) (base de temps)
+        # Valeur en microsecondes (us) (base de temps)
+        elif message.startswith("OSC SET_RATE_AUTO"):
             self.oscilloscope.set_sample_rate_auto(message[18:])
         elif message.startswith("OSC SET_RATE"):
             self.oscilloscope.set_sample_rate(message[13:])
